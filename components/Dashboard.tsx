@@ -6,14 +6,15 @@ import { CreateOrder } from './CreateOrder';
 import { CustomerList, SalesLog, TotalSales } from './Reports';
 import { Analysis } from './Analysis';
 import { Overview } from './Overview';
-import { Users, FileText, ShoppingCart, PieChart, LogOut, TrendingUp, Menu, X, Home, ChevronRight, LayoutDashboard } from 'lucide-react';
+import { UserManagement } from './UserManagement';
+import { Users, FileText, ShoppingCart, PieChart, LogOut, TrendingUp, Menu, X, Home, ChevronRight, LayoutDashboard, UserCog } from 'lucide-react';
 
 interface Props {
   user: User;
   onLogout: () => void;
 }
 
-type View = 'OVERVIEW' | 'ADD_CUSTOMER' | 'CREATE_ORDER' | 'CUSTOMER_LIST' | 'SALES_LOG' | 'TOTAL_SALES' | 'ANALYSIS';
+type View = 'OVERVIEW' | 'ADD_CUSTOMER' | 'CREATE_ORDER' | 'CUSTOMER_LIST' | 'SALES_LOG' | 'TOTAL_SALES' | 'ANALYSIS' | 'USER_MANAGEMENT';
 
 export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
   const [currentView, setCurrentView] = useState<View>('OVERVIEW');
@@ -62,6 +63,8 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
         return <TotalSales user={user} onBack={() => setCurrentView('OVERVIEW')} />;
       case 'ANALYSIS':
         return <Analysis user={user} onBack={() => setCurrentView('OVERVIEW')} />;
+      case 'USER_MANAGEMENT':
+        return <UserManagement currentUser={user} onBack={() => setCurrentView('OVERVIEW')} />;
       default:
         return <Overview user={user} />;
     }
@@ -133,6 +136,12 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
           <SidebarItem view="TOTAL_SALES" icon={PieChart} label="Tổng doanh số" />
           {(user.role === Role.ADMIN || user.role === Role.MANAGER) && (
              <SidebarItem view="ANALYSIS" icon={TrendingUp} label="Phân tích" />
+          )}
+          {user.role === Role.ADMIN && (
+             <React.Fragment>
+                <div className="my-3 border-t border-white/10"></div>
+                <SidebarItem view="USER_MANAGEMENT" icon={UserCog} label="Quản lý nhân sự" />
+             </React.Fragment>
           )}
         </nav>
 
