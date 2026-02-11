@@ -2,7 +2,7 @@ import { User, Customer, Order, Role, Branch, IceCreamItem, ToppingItem } from '
 
 // *** CẤU HÌNH API ***
 // Thay thế URL dưới đây bằng Web App URL bạn nhận được khi deploy Google Apps Script
-const API_URL = 'https://script.google.com/macros/s/AKfycbydhDn2A9Z1aki3i08BQ4UkH0SsHGpbVSkro3z0w5JfHJtQmyMAOFW-SDC9Ie8cg3hF/exec'; 
+const API_URL = 'https://script.google.com/macros/s/AKfycbxUu8EPOofL5lb3ohU-x8EQ1lhMK5cuke1zwBLHcZMWXbmZXhvaSTIyLpZ-ur2XD96L/exec'; 
 
 const STORAGE_KEYS = {
   USERS: 'babyboss_users',
@@ -39,117 +39,6 @@ const callApi = async (action: string, data: any = {}) => {
     }
 };
 
-// Helper: Ensure we always have an array, even if Sheet returns a stringified JSON
-const safeParseArray = (input: any): any[] => {
-    if (!input) return [];
-    if (Array.isArray(input)) return input;
-    if (typeof input === 'string') {
-        try {
-            const parsed = JSON.parse(input);
-            return Array.isArray(parsed) ? parsed : [];
-        } catch (e) {
-            console.warn("Failed to parse array from string:", input);
-            return [];
-        }
-    }
-    return [];
-};
-
-// *** DATA MAPPING HELPER ***
-// Chuyển đổi dữ liệu JSON từ Sheet (format cũ/khác) sang format App đang dùng
-const mapSheetOrderToAppOrder = (sheetOrder: any, users: User[]): Order => {
-    // 1. Map Creator
-    // JSON Sheet dùng 'salesId', App dùng 'createdBy'
-    const createdBy = sheetOrder.salesId || sheetOrder.createdBy || '';
-    let createdByName = sheetOrder.createdByName || '';
-    
-    // Nếu Sheet chưa có tên người tạo, tìm trong danh sách User
-    if (!createdByName && createdBy) {
-        const u = users.find(user => user.id === createdBy);
-        if (u) createdByName = u.fullName;
-    }
-    // Fallback nếu vẫn không có tên
-    if (!createdByName) createdByName = sheetOrder.salesName || 'Unknown';
-
-    // 2. Map Items (Ice Cream) - Sử dụng safeParseArray
-    const rawIceCream = safeParseArray(sheetOrder.iceCreamItems);
-    const rawDiscount = safeParseArray(sheetOrder.discountItems);
-    
-    const items: IceCreamItem[] = [
-        ...rawIceCream.map((i: any) => ({
-            id: i.id,
-            line: i.line, // Pro/Pro Max
-            size: i.size,
-            flavor: i.flavor,
-            quantity: Number(i.quantity || 0),
-            price: Number(i.pricePerUnit !== undefined ? i.pricePerUnit : (i.price || 0)), // Ưu tiên pricePerUnit
-            total: Number(i.total || 0),
-            isGift: false
-        })),
-        ...rawDiscount.map((i: any) => ({
-            id: i.id,
-            line: i.line,
-            size: i.size,
-            flavor: i.flavor,
-            quantity: Number(i.quantity || 0),
-            price: Number(i.pricePerUnit !== undefined ? i.pricePerUnit : (i.price || 0)),
-            total: Number(i.total || 0),
-            isGift: true
-        }))
-    ];
-
-    // 3. Map Toppings - Sử dụng safeParseArray
-    const rawTopping = safeParseArray(sheetOrder.toppingItems);
-    const rawGift = safeParseArray(sheetOrder.giftItems); 
-
-    const toppings: ToppingItem[] = [
-        ...rawTopping.map((i: any) => ({
-            id: i.id,
-            name: i.name,
-            unit: i.unit || 'Cái',
-            quantity: Number(i.quantity || 0),
-            price: Number(i.pricePerUnit !== undefined ? i.pricePerUnit : (i.price || 0)),
-            total: Number(i.total || 0),
-            isGift: false
-        })),
-        ...rawGift.map((i: any) => ({
-            id: i.id,
-            name: i.name || i.flavor || 'Quà tặng',
-            unit: i.unit || 'Cái',
-            quantity: Number(i.quantity || 0),
-            price: Number(i.pricePerUnit !== undefined ? i.pricePerUnit : (i.price || 0)),
-            total: Number(i.total || 0),
-            isGift: true
-        }))
-    ];
-
-    return {
-        id: String(sheetOrder.id),
-        date: sheetOrder.date,
-        customerId: String(sheetOrder.customerId),
-        customerName: sheetOrder.customerName,
-        companyName: sheetOrder.companyName,
-        hasInvoice: Boolean(sheetOrder.hasInvoice),
-        
-        // Map Revenue Fields
-        revenueIceCream: Number(sheetOrder.totalIceCreamRevenue || sheetOrder.revenueIceCream || 0),
-        revenueTopping: Number(sheetOrder.totalToppingRevenue || sheetOrder.revenueTopping || 0),
-        totalRevenue: Number(sheetOrder.totalRevenue || 0),
-        
-        shippingCost: Number(sheetOrder.shippingCost || 0),
-        
-        // Map Payment Fields
-        totalPayment: Number(sheetOrder.finalAmount || sheetOrder.totalPayment || 0),
-        deposit: Number(sheetOrder.depositAmount || sheetOrder.deposit || 0),
-        
-        items,
-        toppings,
-        createdBy,
-        createdByName
-    };
-};
-
-
 export const DataService = {
   // --- SYNC DATA ---
   syncWithSheet: async () => {
@@ -158,7 +47,7 @@ export const DataService = {
           if (data) {
               // 1. Sync Users
               if (data.users && data.users.length > 0) {
-                  // Normalize Roles (Sheet might have 'admin', 'Admin', 'ADMIN')
+                  // Normalize Roles just in case
                   const normalizedUsers = data.users.map((u: any) => ({
                       ...u,
                       role: u.role ? u.role.toLowerCase() : Role.STAFF
@@ -168,23 +57,21 @@ export const DataService = {
 
               // 2. Sync Customers
               if (data.customers) {
-                  // Ensure customers createdBy matches valid user IDs if possible, or keep as is
                   localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(data.customers));
               }
 
-              // 3. Sync Orders (With Mapping)
+              // 3. Sync Orders
               if (data.orders) {
-                  const currentUsers = DataService.getUsers();
-                  const mappedOrders = data.orders.map((rawOrder: any) => {
-                      // Xử lý trường hợp rawOrder có thể là chuỗi JSON do lỗi parse ở GAS
-                      let orderData = rawOrder;
-                      if (typeof rawOrder === 'string') {
-                          try { orderData = JSON.parse(rawOrder); } catch(e) {}
-                      }
-                      
-                      return mapSheetOrderToAppOrder(orderData, currentUsers);
-                  });
-                  localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(mappedOrders));
+                  // Với cấu trúc Sheet mới, dữ liệu trả về đã chuẩn, chỉ cần đảm bảo items/toppings là mảng
+                  const cleanOrders = data.orders.map((o: any) => ({
+                      ...o,
+                      id: String(o.id),
+                      customerId: String(o.customerId),
+                      items: Array.isArray(o.items) ? o.items : [],
+                      toppings: Array.isArray(o.toppings) ? o.toppings : [],
+                      hasInvoice: o.hasInvoice === true || o.hasInvoice === "TRUE"
+                  }));
+                  localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(cleanOrders));
               }
               localStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
               return true;
@@ -220,6 +107,36 @@ export const DataService = {
     const users = stored ? JSON.parse(stored) : [];
     if (users.length === 0) return [DEFAULT_ADMIN];
     return users;
+  },
+
+  // --- USER MANAGEMENT (NEW) ---
+  addUser: async (newUser: User) => {
+      const users = DataService.getUsers();
+      if (users.some(u => u.username === newUser.username)) {
+          throw new Error("Tên đăng nhập đã tồn tại!");
+      }
+      users.push(newUser);
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+      
+      try {
+          await callApi('ADD_USER', newUser); // Requires backend support
+      } catch (e) {
+          console.error("Cloud save failed", e);
+      }
+  },
+
+  updateUser: async (updatedUser: User) => {
+      const users = DataService.getUsers();
+      const index = users.findIndex(u => u.id === updatedUser.id);
+      if (index !== -1) {
+          users[index] = updatedUser;
+          localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+          try {
+             await callApi('UPDATE_USER', updatedUser); // Requires backend support
+          } catch (e) {
+              console.error("Cloud update failed", e);
+          }
+      }
   },
 
   // --- CUSTOMERS ---
@@ -264,26 +181,9 @@ export const DataService = {
     orders.push(order);
     localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
 
-    // Convert App Order back to Sheet Structure (Map props correctly)
-    const apiPayload = {
-        ...order,
-        salesId: order.createdBy, // Map createdBy -> salesId
-        
-        // Ensure arrays are arrays
-        iceCreamItems: order.items.filter(i => !i.isGift),
-        discountItems: order.items.filter(i => i.isGift),
-        toppingItems: order.toppings.filter(i => !i.isGift),
-        giftItems: order.toppings.filter(i => i.isGift),
-        
-        // Map Totals
-        totalIceCreamRevenue: order.revenueIceCream,
-        totalToppingRevenue: order.revenueTopping,
-        finalAmount: order.totalPayment,
-        depositAmount: order.deposit
-    };
-
     try {
-        await callApi('ADD_ORDER', apiPayload);
+        // Gửi nguyên object Order lên, Apps Script mới đã xử lý được cấu trúc này
+        await callApi('ADD_ORDER', order);
     } catch (e) {
         alert("Lỗi lưu đơn hàng lên Google Sheet! Dữ liệu chỉ được lưu tạm trên máy.");
     }
