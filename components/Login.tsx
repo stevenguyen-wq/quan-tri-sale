@@ -86,7 +86,7 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
 
             <div className="mt-8 pt-6 border-t border-gray-100 text-center text-xs text-gray-400">
                 <p>Khởi tạo lần đầu:</p>
-                <p>Username: admin / Password: 123</p>
+                <p>Liên hệ bộ phận Nhân sự</p>
             </div>
         </div>
       </div>
