@@ -28,15 +28,25 @@ const callApi = async (action: string, data: any = {}) => {
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
-            // Explicitly set text/plain to prevent CORS preflight issues with Google Apps Script
-            headers: {
-              'Content-Type': 'text/plain;charset=utf-8',
-            },
+            // Removed explicit Content-Type to allow browser to handle Simple Request (text/plain) automatically
+            // This prevents CORS Preflight (OPTIONS) which Apps Script does not support well.
             body: JSON.stringify({ action, data })
         });
-        const json = await response.json();
-        if (json.status === 'error') throw new Error(json.message);
-        return json.data;
+
+        if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
+
+        const text = await response.text();
+        
+        try {
+            const json = JSON.parse(text);
+            if (json.status === 'error') throw new Error(json.message);
+            return json.data;
+        } catch (e) {
+            console.error("Invalid JSON response:", text);
+            throw new Error("Lỗi dữ liệu từ Server. Vui lòng kiểm tra lại đường truyền hoặc Script.");
+        }
     } catch (error) {
         console.error("API Error:", error);
         throw error;
@@ -80,6 +90,7 @@ export const DataService = {
               localStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
               return true;
           }
+          return false;
       } catch (e) {
           console.error("Sync failed", e);
           return false;
@@ -89,6 +100,7 @@ export const DataService = {
   // --- AUTH ---
   login: (username: string, password: string): User | null => {
     const users = DataService.getUsers();
+    // Simple matching
     const user = users.find(u => u.username === username && u.password === password);
     if (user) {
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
@@ -126,6 +138,7 @@ export const DataService = {
           await callApi('ADD_USER', newUser); // Requires backend support
       } catch (e) {
           console.error("Cloud save failed", e);
+          throw new Error("Lỗi kết nối Server: Đã lưu offline, nhưng chưa đồng bộ lên Sheet.");
       }
   },
 
@@ -139,6 +152,7 @@ export const DataService = {
              await callApi('UPDATE_USER', updatedUser); // Requires backend support
           } catch (e) {
               console.error("Cloud update failed", e);
+               throw new Error("Lỗi kết nối Server: Đã cập nhật offline.");
           }
       }
   },
