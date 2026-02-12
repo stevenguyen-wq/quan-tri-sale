@@ -18,7 +18,7 @@ const DEFAULT_ADMIN: User = {
     phone: '0909000000',
     position: 'Administrator',
     username: 'admin',
-    password: '123595',
+    password: '123',
     role: Role.ADMIN,
     branch: Branch.HOI_SO
 };
