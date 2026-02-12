@@ -28,6 +28,10 @@ const callApi = async (action: string, data: any = {}) => {
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
+            // Explicitly set text/plain to prevent CORS preflight issues with Google Apps Script
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8',
+            },
             body: JSON.stringify({ action, data })
         });
         const json = await response.json();
