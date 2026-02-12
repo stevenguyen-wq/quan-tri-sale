@@ -28,24 +28,33 @@ const callApi = async (action: string, data: any = {}) => {
     try {
         const response = await fetch(API_URL, {
             method: 'POST',
-            // Removed explicit Content-Type to allow browser to handle Simple Request (text/plain) automatically
-            // This prevents CORS Preflight (OPTIONS) which Apps Script does not support well.
+            // Google Apps Script requires text/plain to avoid CORS preflight (OPTIONS) requests in some environments
+            headers: {
+              'Content-Type': 'text/plain;charset=utf-8',
+            },
             body: JSON.stringify({ action, data })
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP Error: ${response.status}`);
+            throw new Error(`Lỗi HTTP: ${response.status} ${response.statusText}`);
         }
 
         const text = await response.text();
         
+        // Check for HTML response (Login screen or Error page from Google)
+        if (text.trim().startsWith('<')) {
+             console.error("Received HTML instead of JSON:", text);
+             throw new Error("Lỗi Deployment: API trả về HTML. Hãy kiểm tra quyền truy cập Script (Who has access: Anyone).");
+        }
+
         try {
             const json = JSON.parse(text);
             if (json.status === 'error') throw new Error(json.message);
             return json.data;
-        } catch (e) {
-            console.error("Invalid JSON response:", text);
-            throw new Error("Lỗi dữ liệu từ Server. Vui lòng kiểm tra lại đường truyền hoặc Script.");
+        } catch (e: any) {
+            console.error("Invalid JSON:", text);
+            if (e.message.includes('Lỗi Deployment')) throw e;
+            throw new Error("Lỗi dữ liệu: Server trả về định dạng không hợp lệ.");
         }
     } catch (error) {
         console.error("API Error:", error);
@@ -60,8 +69,7 @@ export const DataService = {
           const data = await callApi('GET_ALL_DATA');
           if (data) {
               // 1. Sync Users
-              if (data.users && data.users.length > 0) {
-                  // Normalize Roles just in case
+              if (data.users && Array.isArray(data.users)) {
                   const normalizedUsers = data.users.map((u: any) => ({
                       ...u,
                       role: u.role ? u.role.toLowerCase() : Role.STAFF
@@ -70,13 +78,12 @@ export const DataService = {
               }
 
               // 2. Sync Customers
-              if (data.customers) {
+              if (data.customers && Array.isArray(data.customers)) {
                   localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(data.customers));
               }
 
               // 3. Sync Orders
-              if (data.orders) {
-                  // Với cấu trúc Sheet mới, dữ liệu trả về đã chuẩn, chỉ cần đảm bảo items/toppings là mảng
+              if (data.orders && Array.isArray(data.orders)) {
                   const cleanOrders = data.orders.map((o: any) => ({
                       ...o,
                       id: String(o.id),
@@ -91,9 +98,9 @@ export const DataService = {
               return true;
           }
           return false;
-      } catch (e) {
-          console.error("Sync failed", e);
-          return false;
+      } catch (e: any) {
+          console.error("Sync failed details:", e);
+          throw e; // Re-throw to handle in UI
       }
   },
 
