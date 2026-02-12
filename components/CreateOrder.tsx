@@ -4,7 +4,7 @@ import { Input, Select } from './Input';
 import { DataService } from '../services/dataService';
 import { User, Customer, IceCreamItem, ToppingItem, Order, IceCreamLine, Role } from '../types';
 import { FLAVORS, PRICING, SIZES_BY_LINE } from '../constants';
-import { Trash2, Plus, ArrowLeft, CheckCircle, Gift, Eye, X, User as UserIcon, Building2, Phone, MapPin, Briefcase, Package, Truck, Download, Percent, CreditCard } from 'lucide-react';
+import { Trash2, Plus, ArrowLeft, CheckCircle, Gift, Eye, X, User as UserIcon, Building2, Phone, MapPin, Briefcase, Package, Truck, Download, Percent, CreditCard, Loader2 } from 'lucide-react';
 
 interface Props {
   user: User;
@@ -15,6 +15,7 @@ export const CreateOrder: React.FC<Props> = ({ user, onBack }) => {
   const [step, setStep] = useState<1 | 2>(1); // 1: Entry, 2: Review
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isExporting, setIsExporting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Form State
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
@@ -227,9 +228,10 @@ export const CreateOrder: React.FC<Props> = ({ user, onBack }) => {
     const invalidIceCream = iceCreamItems.some(i => !i.line || !i.size || !i.flavor || i.quantity <= 0);
     const invalidDiscount = discountItems.some(i => !i.line || !i.size || !i.flavor || i.quantity <= 0);
     const invalidGift = giftToppingItems.some(i => !i.name || !i.unit || i.quantity <= 0); 
+    const invalidTopping = toppingItems.some(i => !i.name || !i.unit || i.quantity <= 0);
 
-    if (invalidIceCream || invalidDiscount || invalidGift) {
-        alert("Vui lòng điền đầy đủ thông tin các dòng sản phẩm");
+    if (invalidIceCream || invalidDiscount || invalidGift || invalidTopping) {
+        alert("Vui lòng điền đầy đủ thông tin (Tên, Quy cách, Số lượng > 0) cho tất cả các dòng sản phẩm/topping.");
         return;
     }
     
@@ -241,45 +243,57 @@ export const CreateOrder: React.FC<Props> = ({ user, onBack }) => {
     setStep(2);
   };
 
-  const handleSubmit = () => {
-    const customer = customers.find(c => c.id === selectedCustomerId);
-    if (!customer) return;
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+        const customer = customers.find(c => c.id === selectedCustomerId);
+        if (!customer) {
+            alert("Lỗi: Không tìm thấy thông tin khách hàng đã chọn. Vui lòng chọn lại.");
+            setIsSubmitting(false);
+            return;
+        }
 
-    // Merge Items
-    // Ice Cream items (Paid + Discount)
-    const allIceCreamItems = [
-        ...iceCreamItems, 
-        ...discountItems.map(i => ({...i, isGift: true}))
-    ];
+        // Merge Items
+        // Ice Cream items (Paid + Discount)
+        const allIceCreamItems = [
+            ...iceCreamItems, 
+            ...discountItems.map(i => ({...i, isGift: true}))
+        ];
 
-    // Topping items (Paid + Gift)
-    const allToppingItems = [
-        ...toppingItems,
-        ...giftToppingItems.map(i => ({...i, isGift: true}))
-    ];
+        // Topping items (Paid + Gift)
+        const allToppingItems = [
+            ...toppingItems,
+            ...giftToppingItems.map(i => ({...i, isGift: true}))
+        ];
 
-    const newOrder: Order = {
-        id: Date.now().toString(),
-        date: orderDate,
-        customerId: customer.id,
-        customerName: customer.name,
-        companyName: customer.company,
-        items: allIceCreamItems,
-        toppings: allToppingItems,
-        hasInvoice,
-        revenueIceCream, 
-        revenueTopping,
-        totalRevenue,
-        shippingCost,
-        totalPayment,
-        deposit,
-        createdBy: user.id,
-        createdByName: user.fullName
-    };
+        const newOrder: Order = {
+            id: Date.now().toString(),
+            date: orderDate,
+            customerId: customer.id,
+            customerName: customer.name,
+            companyName: customer.company,
+            items: allIceCreamItems,
+            toppings: allToppingItems,
+            hasInvoice,
+            revenueIceCream, 
+            revenueTopping,
+            totalRevenue,
+            shippingCost,
+            totalPayment,
+            deposit,
+            createdBy: user.id,
+            createdByName: user.fullName
+        };
 
-    DataService.addOrder(newOrder);
-    alert("Đơn hàng đã được lưu vào nhật ký!");
-    onBack();
+        // Async save
+        await DataService.addOrder(newOrder);
+        alert("Đơn hàng đã được lưu vào nhật ký!");
+        onBack();
+    } catch (e: any) {
+        alert("Có lỗi xảy ra khi lưu đơn hàng: " + e.message);
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   const tableInputClass = "w-full bg-white text-baby-navy placeholder-baby-navy/60 border border-baby-navy rounded-md px-2 py-2 text-sm focus:ring-2 focus:ring-baby-pink/50 outline-none transition-all";
@@ -478,13 +492,17 @@ export const CreateOrder: React.FC<Props> = ({ user, onBack }) => {
             </div>
 
             <div className="flex justify-between gap-4">
-                <Button variant="outline" onClick={() => setStep(1)}>Sửa lại</Button>
+                <Button variant="outline" onClick={() => setStep(1)} disabled={isSubmitting}>Sửa lại</Button>
                 <div className="flex gap-2">
-                    <Button variant="secondary" onClick={handleExportPDF} disabled={isExporting}>
+                    <Button variant="secondary" onClick={handleExportPDF} disabled={isExporting || isSubmitting}>
                          {isExporting ? 'Đang tạo...' : 'Xuất file PDF'}
                     </Button>
-                    <Button variant="primary" onClick={handleSubmit}>
-                        <CheckCircle className="mr-2" size={18}/> Xác nhận & Lưu
+                    <Button variant="primary" onClick={handleSubmit} disabled={isSubmitting}>
+                        {isSubmitting ? (
+                            <><Loader2 className="mr-2 animate-spin" size={18}/> Đang lưu...</>
+                        ) : (
+                            <><CheckCircle className="mr-2" size={18}/> Xác nhận & Lưu</>
+                        )}
                     </Button>
                 </div>
             </div>
