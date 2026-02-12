@@ -50,7 +50,7 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
             <div className="w-20 h-20 bg-baby-pink rounded-full mx-auto flex items-center justify-center mb-4 shadow-lg">
                 <span className="text-3xl font-bold text-baby-navy">BB</span>
             </div>
-            <h1 className="text-2xl font-bold text-white">Baby Boss JSC</h1>
+            <h1 className="text-2xl font-bold text-white">Baby Boss JSC.,</h1>
             <p className="text-blue-200 text-sm mt-1">Hệ thống quản lý bán hàng</p>
         </div>
         
@@ -85,8 +85,8 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
             </form>
 
             <div className="mt-8 pt-6 border-t border-gray-100 text-center text-xs text-gray-400">
-                <p>Khởi tạo lần đầu:</p>
-                <p>Liên hệ bộ phận Nhân sự</p>
+                <p>Hotline:</p>
+                <p>0937.152.521</p>
             </div>
         </div>
       </div>
