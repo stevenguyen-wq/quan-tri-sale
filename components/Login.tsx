@@ -3,7 +3,7 @@ import { DataService } from '../services/dataService';
 import { User } from '../types';
 import { Button } from './Button';
 import { Input } from './Input';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Phone } from 'lucide-react';
 
 interface Props {
   onLogin: (user: User) => void;
@@ -50,7 +50,7 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
             <div className="w-20 h-20 bg-baby-pink rounded-full mx-auto flex items-center justify-center mb-4 shadow-lg">
                 <span className="text-3xl font-bold text-baby-navy">BB</span>
             </div>
-            <h1 className="text-2xl font-bold text-white">Baby Boss JSC.,</h1>
+            <h1 className="text-2xl font-bold text-white">Baby Boss JSC</h1>
             <p className="text-blue-200 text-sm mt-1">Hệ thống quản lý bán hàng</p>
         </div>
         
@@ -84,9 +84,11 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
             </Button>
             </form>
 
-            <div className="mt-8 pt-6 border-t border-gray-100 text-center text-xs text-gray-400">
-                <p>Hotline:</p>
-                <p>0937.152.521</p>
+            <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+                <div className="flex items-center justify-center gap-2 text-baby-navy font-bold text-lg">
+                    <Phone size={20} className="text-baby-pink" />
+                    <span>Hotline: 0937152521</span>
+                </div>
             </div>
         </div>
       </div>
