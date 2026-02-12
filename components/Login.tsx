@@ -3,7 +3,7 @@ import { DataService } from '../services/dataService';
 import { User } from '../types';
 import { Button } from './Button';
 import { Input } from './Input';
-import { RefreshCw, Phone, AlertCircle } from 'lucide-react';
+import { RefreshCw, Phone, AlertCircle, WifiOff } from 'lucide-react';
 
 interface Props {
   onLogin: (user: User) => void;
@@ -21,33 +21,47 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
     setIsLoading(true);
     setError('');
     
+    let syncFailed = false;
+
     try {
         // 1. Attempt to sync data first
-        setLoadingMessage('Đang kết nối hệ thống...');
-        const syncSuccess = await DataService.syncWithSheet();
-        
-        // 2. Perform login check against local data (whether sync succeeded or not)
-        setLoadingMessage('Đang kiểm tra thông tin...');
-        const user = DataService.login(username, password);
-        
-        if (user) {
-            if (!syncSuccess) {
-                alert("Cảnh báo: Không thể kết nối với Google Sheet. Bạn đang đăng nhập bằng dữ liệu cũ trên thiết bị.");
-            }
-            onLogin(user);
+        setLoadingMessage('Đang kết nối Google Sheet...');
+        await DataService.syncWithSheet();
+    } catch (err: any) {
+        syncFailed = true;
+        console.warn("Sync failed, trying offline login", err);
+        // Don't stop login flow, try to login with offline data
+        // But store the error to show if login fails or as a warning
+        if (err.message) {
+            setError(`Kết nối thất bại: ${err.message}`);
         } else {
-            if (!syncSuccess) {
-                 setError('Lỗi kết nối Server và không tìm thấy tài khoản. Vui lòng kiểm tra internet hoặc đường dẫn API.');
-            } else {
-                 setError('Tên đăng nhập hoặc mật khẩu không đúng');
-            }
+            setError('Không thể kết nối Server. Vui lòng kiểm tra mạng.');
         }
-    } catch (err) {
-        setError('Đã xảy ra lỗi không xác định.');
-    } finally {
-        setIsLoading(false);
-        setLoadingMessage('');
     }
+
+    // 2. Perform login check against local data (whether sync succeeded or not)
+    setLoadingMessage('Đang kiểm tra thông tin...');
+    // Slight delay to allow UI to update if needed
+    await new Promise(r => setTimeout(r, 500));
+
+    const user = DataService.login(username, password);
+    
+    if (user) {
+        if (syncFailed) {
+            alert("Cảnh báo: Không thể kết nối với Google Sheet. \nBạn đang đăng nhập bằng dữ liệu cũ trên thiết bị.");
+        }
+        onLogin(user);
+    } else {
+        if (syncFailed) {
+            // Keep the connection error visible, but append login failure
+             setError(prev => `${prev} \n\nNgoài ra: Không tìm thấy tài khoản "${username}" trong dữ liệu cũ.`);
+        } else {
+             setError('Tên đăng nhập hoặc mật khẩu không đúng');
+        }
+    }
+
+    setIsLoading(false);
+    setLoadingMessage('');
   };
 
   return (
@@ -78,14 +92,16 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
                 placeholder="Nhập password"
                 disabled={isLoading}
             />
+            
             {error && (
-                <div className="bg-red-50 p-3 rounded-lg flex gap-2 items-start text-red-600 text-sm">
-                    <AlertCircle size={16} className="mt-0.5 shrink-0"/>
-                    <span>{error}</span>
+                <div className="bg-red-50 p-3 rounded-lg flex gap-2 items-start text-red-600 text-xs border border-red-100">
+                    {error.includes('Kết nối') ? <WifiOff size={16} className="mt-0.5 shrink-0"/> : <AlertCircle size={16} className="mt-0.5 shrink-0"/>}
+                    <span className="whitespace-pre-line">{error}</span>
                 </div>
             )}
+
             {isLoading && (
-                <div className="flex items-center justify-center gap-2 text-baby-navy text-sm py-2">
+                <div className="flex items-center justify-center gap-2 text-baby-navy text-sm py-2 bg-blue-50 rounded-lg">
                     <RefreshCw className="animate-spin" size={16}/>
                     {loadingMessage}
                 </div>
