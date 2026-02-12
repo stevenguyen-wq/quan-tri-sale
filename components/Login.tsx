@@ -3,7 +3,7 @@ import { DataService } from '../services/dataService';
 import { User } from '../types';
 import { Button } from './Button';
 import { Input } from './Input';
-import { RefreshCw, Phone } from 'lucide-react';
+import { RefreshCw, Phone, AlertCircle } from 'lucide-react';
 
 interface Props {
   onLogin: (user: User) => void;
@@ -22,21 +22,28 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
     setError('');
     
     try {
-        // 1. Attempt to sync data first to ensure we have latest users
+        // 1. Attempt to sync data first
         setLoadingMessage('Đang kết nối hệ thống...');
-        await DataService.syncWithSheet();
+        const syncSuccess = await DataService.syncWithSheet();
         
-        // 2. Perform login check against synced data
+        // 2. Perform login check against local data (whether sync succeeded or not)
         setLoadingMessage('Đang kiểm tra thông tin...');
         const user = DataService.login(username, password);
         
         if (user) {
+            if (!syncSuccess) {
+                alert("Cảnh báo: Không thể kết nối với Google Sheet. Bạn đang đăng nhập bằng dữ liệu cũ trên thiết bị.");
+            }
             onLogin(user);
         } else {
-            setError('Tên đăng nhập hoặc mật khẩu không đúng');
+            if (!syncSuccess) {
+                 setError('Lỗi kết nối Server và không tìm thấy tài khoản. Vui lòng kiểm tra internet hoặc đường dẫn API.');
+            } else {
+                 setError('Tên đăng nhập hoặc mật khẩu không đúng');
+            }
         }
     } catch (err) {
-        setError('Lỗi kết nối. Vui lòng thử lại.');
+        setError('Đã xảy ra lỗi không xác định.');
     } finally {
         setIsLoading(false);
         setLoadingMessage('');
@@ -71,9 +78,14 @@ export const Login: React.FC<Props> = ({ onLogin }) => {
                 placeholder="Nhập password"
                 disabled={isLoading}
             />
-            {error && <div className="text-red-500 text-sm text-center">{error}</div>}
+            {error && (
+                <div className="bg-red-50 p-3 rounded-lg flex gap-2 items-start text-red-600 text-sm">
+                    <AlertCircle size={16} className="mt-0.5 shrink-0"/>
+                    <span>{error}</span>
+                </div>
+            )}
             {isLoading && (
-                <div className="flex items-center justify-center gap-2 text-baby-navy text-sm">
+                <div className="flex items-center justify-center gap-2 text-baby-navy text-sm py-2">
                     <RefreshCw className="animate-spin" size={16}/>
                     {loadingMessage}
                 </div>
