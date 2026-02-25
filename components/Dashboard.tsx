@@ -81,9 +81,9 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
         />
       )}
 
-      {/* Sidebar - Navy Blue Background with Gradient */}
+      {/* Sidebar - Navy Blue Background */}
       <aside 
-        className={`fixed inset-y-0 left-0 z-[70] w-72 bg-gradient-to-b from-baby-navy to-[#0d1245] shadow-2xl transform transition-transform duration-300 ease-out flex flex-col lg:static lg:translate-x-0 lg:shadow-none lg:z-auto ${
+        className={`fixed inset-y-0 left-0 z-[70] w-72 bg-baby-navy shadow-2xl transform transition-transform duration-300 ease-out flex flex-col lg:static lg:translate-x-0 lg:shadow-none lg:z-auto ${
           isMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -158,7 +158,7 @@ export const Dashboard: React.FC<Props> = ({ user, onLogout }) => {
       </aside>
 
       {/* Main Layout */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-gray-50">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden bg-baby-pastel">
         {/* Header - Sticky on Mobile - White */}
         <header className="bg-white/90 backdrop-blur-md border-b border-gray-200 sticky top-0 z-40 shadow-sm lg:hidden shrink-0">
           <div className="px-4 py-3 flex justify-between items-center">
