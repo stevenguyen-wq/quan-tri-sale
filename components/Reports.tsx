@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { User, Customer, Order, Role, Branch } from '../types';
 import { DataService } from '../services/dataService';
-import { ArrowLeft, Filter, User as UserIcon, Package, Phone, Building2, MapPin, Briefcase, Printer, X, Edit2, Save, Download, StickyNote, Eye, ChevronRight, Calendar, DollarSign, TrendingUp, Plus, Search } from 'lucide-react';
+import { ArrowLeft, Filter, User as UserIcon, Package, Phone, Building2, MapPin, Briefcase, Printer, X, Edit2, Save, Download, StickyNote, Eye, ChevronRight, Calendar, DollarSign, TrendingUp, Plus, Search, Clock } from 'lucide-react';
 import { Select, Input } from './Input';
 import { Button } from './Button';
 
@@ -915,17 +915,39 @@ export const CustomerList: React.FC<ReportProps> = ({ user, onBack, onAddCustome
               <tbody className="text-gray-700">
                   {filteredCustomers.map((cust, idx) => {
                       const stats = getCustomerStats(cust.id);
+                      
+                      // Check for inactivity (> 6 months)
+                      const isInactive = (() => {
+                          if (stats) {
+                              return stats.daysSinceLastPurchase > 180;
+                          }
+                          // If no orders, check if created > 6 months ago
+                          if (cust.createdAt) {
+                              const createdDate = new Date(cust.createdAt);
+                              const diffTime = new Date().getTime() - createdDate.getTime();
+                              const daysSinceCreation = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                              return daysSinceCreation > 180;
+                          }
+                          return false;
+                      })();
+
                       return (
                           <tr 
                               key={cust.id} 
                               onClick={() => setSelectedCustomer(cust)}
                               className={`
-                                  hover:bg-blue-50/80 border-b last:border-0 transition-all duration-200 group
-                                  ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}
+                                  border-b last:border-0 transition-all duration-200 group cursor-pointer
+                                  ${isInactive 
+                                      ? 'bg-red-50 hover:bg-red-100/50' 
+                                      : (idx % 2 === 0 ? 'bg-white hover:bg-blue-50/80' : 'bg-gray-50/30 hover:bg-blue-50/80')
+                                  }
                               `}
-                              title="Nhấn để xem chi tiết"
+                              title={isInactive ? "Khách hàng chưa mua hàng trong 6 tháng qua" : "Nhấn để xem chi tiết"}
                           >
-                              <td className="p-4 font-bold text-baby-navy group-hover:text-blue-700 group-hover:translate-x-1 transition-transform">{cust.name}</td>
+                              <td className="p-4 font-bold text-baby-navy group-hover:text-blue-700 group-hover:translate-x-1 transition-transform flex items-center gap-2">
+                                  {cust.name}
+                                  {isInactive && <Clock size={14} className="text-red-500" />}
+                              </td>
                               <td className="p-4">{cust.company}</td>
                               <td className="p-4 font-mono text-xs">{cust.phone}</td>
                               <td className="p-4 truncate max-w-[150px] text-xs text-gray-500">{cust.address}</td>
