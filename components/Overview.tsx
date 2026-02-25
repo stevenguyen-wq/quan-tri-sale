@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { User, Order, Role, Branch } from '../types';
 import { DataService } from '../services/dataService';
-import { TrendingUp, ShoppingCart, Users, DollarSign, Calendar, Award, Star, Clock, User as UserIcon, Phone, Briefcase, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
+import { TrendingUp, ShoppingCart, Users, DollarSign, Calendar, Award, Star, Clock, User as UserIcon, Phone, Briefcase, MapPin, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 
 interface Props {
   user: User;
@@ -14,12 +14,29 @@ export const Overview: React.FC<Props> = ({ user }) => {
   const [showAllEmployees, setShowAllEmployees] = useState(false);
   const [showAllCustomers, setShowAllCustomers] = useState(false);
   const [showAllStaffCustomers, setShowAllStaffCustomers] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Get relevant data
   const orders = DataService.getOrdersForUser(user);
   const customers = DataService.getCustomersForUser(user);
   const allUsers = DataService.getUsers();
   
+  const handleSync = async () => {
+      setIsSyncing(true);
+      try {
+          const success = await DataService.syncWithSheet();
+          if (success) {
+              alert("Đã đồng bộ dữ liệu thành công!");
+          } else {
+              alert("Không nhận được dữ liệu từ Server.");
+          }
+      } catch (error: any) {
+          alert("Lỗi đồng bộ: " + (error.message || error));
+      } finally {
+          setIsSyncing(false);
+      }
+  };
+
   const directManager = useMemo(() => {
       if (user.role === Role.ADMIN) return "N/A";
       if (user.role === Role.MANAGER) return "Ban Giám Đốc";
@@ -174,7 +191,17 @@ export const Overview: React.FC<Props> = ({ user }) => {
     <div className="animate-fade-in p-2">
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
             <div>
-                <h2 className="text-3xl font-extrabold text-baby-navy tracking-tight">Tổng quan</h2>
+                <div className="flex items-center gap-3">
+                    <h2 className="text-3xl font-extrabold text-baby-navy tracking-tight">Tổng quan</h2>
+                    <button 
+                        onClick={handleSync} 
+                        disabled={isSyncing} 
+                        className="p-2 bg-blue-50 text-baby-navy rounded-full hover:bg-blue-100 transition-colors shadow-sm" 
+                        title="Đồng bộ dữ liệu từ Google Sheet"
+                    >
+                        <RefreshCw size={20} className={isSyncing ? "animate-spin" : ""} />
+                    </button>
+                </div>
                 <p className="text-gray-500 font-medium">Xin chào, {user.fullName}!</p>
             </div>
             <div className="bg-white p-1.5 rounded-xl border border-gray-200 shadow-sm flex overflow-x-auto max-w-full">
