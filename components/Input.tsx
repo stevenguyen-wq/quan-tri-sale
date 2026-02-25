@@ -13,21 +13,21 @@ export const Input: React.FC<InputProps> = ({ label, error, labelClassName, clas
       <input
         className={`
             w-full
-            bg-white 
-            text-baby-navy 
-            placeholder-baby-navy/60
-            border border-baby-navy
+            bg-baby-navy 
+            text-white 
+            placeholder-white/60
+            border border-white/20
             rounded-xl 
             px-4 py-2.5 
             text-sm 
             outline-none 
             transition-all duration-300 ease-in-out
-            focus:border-baby-navy 
+            focus:border-baby-pink 
             focus:ring-4 focus:ring-baby-pink/30 
-            hover:border-baby-navy/80
-            accent-baby-navy
+            hover:border-white/40
+            accent-baby-pink
             [&::-webkit-calendar-picker-indicator]:cursor-pointer
-            [&::-webkit-calendar-picker-indicator]:filter-[invert(13%)_sepia(66%)_saturate(3620%)_hue-rotate(229deg)_brightness(88%)_contrast(98%)]
+            [&::-webkit-calendar-picker-indicator]:filter-[invert(1)]
             ${error ? 'border-red-500 focus:ring-red-200' : ''}
         `}
         {...props}
@@ -54,17 +54,17 @@ export const Select: React.FC<SelectProps> = ({ label, error, options, placehold
             className={`
                 w-full
                 appearance-none
-                bg-white 
-                text-baby-navy 
-                border border-baby-navy
+                bg-baby-navy 
+                text-white 
+                border border-white/20
                 rounded-xl 
                 px-4 py-2.5 
                 text-sm 
                 outline-none 
                 transition-all duration-300 ease-in-out
-                focus:border-baby-navy 
+                focus:border-baby-pink 
                 focus:ring-4 focus:ring-baby-pink/30 
-                hover:border-baby-navy/80
+                hover:border-white/40
                 cursor-pointer
                 ${error ? 'border-red-500 focus:ring-red-200' : ''}
             `}
@@ -72,10 +72,10 @@ export const Select: React.FC<SelectProps> = ({ label, error, options, placehold
             >
                 <option value="" className="text-gray-400">{placeholder || "-- Chọn --"}</option>
                 {options.map((opt) => (
-                    <option key={opt.value} value={opt.value} className="text-baby-navy py-1 font-medium">{opt.label}</option>
+                    <option key={opt.value} value={opt.value} className="text-white bg-baby-navy py-1 font-medium">{opt.label}</option>
                 ))}
             </select>
-            <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-baby-navy">
+            <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-white">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
             </div>
         </div>
