@@ -296,7 +296,7 @@ export const CreateOrder: React.FC<Props> = ({ user, onBack }) => {
     }
   };
 
-  const tableInputClass = "w-full bg-white text-baby-navy placeholder-baby-navy/60 border border-baby-navy rounded-md px-2 py-2 text-sm focus:ring-2 focus:ring-baby-pink/50 outline-none transition-all";
+  const tableInputClass = "w-full bg-baby-navy text-white placeholder-white/60 border border-white/20 rounded-md px-2 py-2 text-sm focus:ring-2 focus:ring-baby-pink/50 outline-none transition-all";
 
   // Prepare options for select, including ownership info for Admin/Managers
   const customerOptions = useMemo(() => {
