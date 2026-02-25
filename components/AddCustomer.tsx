@@ -256,7 +256,7 @@ export const AddCustomer: React.FC<Props> = ({ user, onBack }) => {
         <div className="md:col-span-2">
             <label className="text-sm font-semibold text-baby-navy block mb-1">Ghi chú</label>
             <textarea
-                className="w-full bg-white text-baby-navy placeholder-baby-navy/60 border border-baby-navy rounded-xl px-3 py-2 text-sm h-24 resize-none outline-none focus:ring-4 focus:ring-baby-pink/30 hover:border-baby-navy/80 transition-all"
+                className="w-full bg-baby-navy text-white placeholder-white/60 border border-white/20 rounded-xl px-3 py-2 text-sm h-24 resize-none outline-none focus:ring-4 focus:ring-baby-pink/30 hover:border-white/40 transition-all"
                 value={formData.note}
                 onChange={e => setFormData({...formData, note: e.target.value})}
                 placeholder="Nhập ghi chú về khách hàng..."
