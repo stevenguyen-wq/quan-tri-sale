@@ -32,7 +32,8 @@ const callApi = async (action: string, data: any = {}) => {
             headers: {
               'Content-Type': 'text/plain;charset=utf-8',
             },
-            body: JSON.stringify({ action, data })
+            body: JSON.stringify({ action, data, _t: Date.now() }), // Add timestamp to prevent caching
+            redirect: 'follow'
         });
 
         if (!response.ok) {
@@ -192,6 +193,18 @@ export const DataService = {
         } catch (e) {
             alert("Lỗi cập nhật lên Google Sheet!");
         }
+    }
+  },
+
+  deleteCustomer: async (customerId: string) => {
+    const customers = DataService.getCustomers();
+    const newCustomers = customers.filter(c => c.id !== customerId);
+    localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(newCustomers));
+    try {
+        await callApi('DELETE_CUSTOMER', { id: customerId });
+    } catch (e) {
+        console.error("Lỗi xoá trên Google Sheet", e);
+        // alert("Lỗi xoá trên Google Sheet! Dữ liệu chỉ được xoá tạm trên máy.");
     }
   },
 
