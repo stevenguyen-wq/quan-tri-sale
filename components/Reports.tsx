@@ -724,7 +724,7 @@ export const CustomerList: React.FC<ReportProps> = ({ user, onBack, onAddCustome
                               <div className="border-t pt-2">
                                   <label className="text-sm font-semibold text-baby-navy block mb-1">Ghi chú</label>
                                   <textarea
-                                      className="w-full bg-white text-baby-navy placeholder-baby-navy/50 border border-baby-navy rounded-xl px-3 py-2 text-sm h-20 resize-none outline-none focus:ring-4 focus:ring-baby-pink/30 hover:border-baby-navy/80 transition-all"
+                                      className="w-full bg-baby-navy text-white placeholder-white/50 border border-white/20 rounded-xl px-3 py-2 text-sm h-20 resize-none outline-none focus:ring-4 focus:ring-baby-pink/30 hover:border-white/40 transition-all"
                                       value={editForm.note || ''}
                                       onChange={e => setEditForm({...editForm, note: e.target.value})}
                                   />
