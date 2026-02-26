@@ -71,24 +71,46 @@ export const DataService = {
           if (data) {
               // 1. Sync Users
               if (data.users && Array.isArray(data.users)) {
-                  const normalizedUsers = data.users.map((u: any) => ({
-                      ...u,
-                      role: u.role ? u.role.toLowerCase() : Role.STAFF
-                  }));
+                  const normalizedUsers = data.users.map((u: any) => {
+                      let branch = u.branch || '';
+                      if (branch.toLowerCase().includes('hội sở')) branch = Branch.HOI_SO;
+                      else if (branch.toLowerCase().includes('miền bắc')) branch = Branch.MIEN_BAC;
+                      
+                      return {
+                          ...u,
+                          id: String(u.id || u.ID || ''),
+                          role: u.role ? u.role.toLowerCase() : Role.STAFF,
+                          branch: branch
+                      };
+                  });
                   localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(normalizedUsers));
               }
 
               // 2. Sync Customers
               if (data.customers && Array.isArray(data.customers)) {
-                  localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(data.customers));
+                  const cleanCustomers = data.customers.map((c: any) => ({
+                      ...c,
+                      id: String(c.id || c.ID || ''),
+                      createdBy: String(c.createdBy || c.salesId || c.SalesID || ''),
+                      createdByName: c.createdByName || c.salesName || ''
+                  }));
+                  localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(cleanCustomers));
               }
 
               // 3. Sync Orders
               if (data.orders && Array.isArray(data.orders)) {
                   const cleanOrders = data.orders.map((o: any) => ({
                       ...o,
-                      id: String(o.id),
-                      customerId: String(o.customerId),
+                      id: String(o.id || o.ID || ''),
+                      customerId: String(o.customerId || o.CustomerID || ''),
+                      // Mapping fields from Google Sheet naming conventions
+                      createdBy: String(o.createdBy || o.salesId || o.SalesID || ''),
+                      createdByName: o.createdByName || o.salesName || '',
+                      totalRevenue: Number(o.totalRevenue || o.revenue || 0),
+                      totalPayment: Number(o.totalPayment || o.finalAmount || 0),
+                      deposit: Number(o.deposit || o.depositAmount || 0),
+                      revenueIceCream: Number(o.revenueIceCream || o.totalIceCreamRevenue || 0),
+                      revenueTopping: Number(o.revenueTopping || o.totalToppingRevenue || 0),
                       items: Array.isArray(o.items) ? o.items : [],
                       toppings: Array.isArray(o.toppings) ? o.toppings : [],
                       hasInvoice: o.hasInvoice === true || o.hasInvoice === "TRUE"
@@ -240,14 +262,12 @@ export const DataService = {
     // 2. MANAGER: Xem khách hàng của toàn bộ nhân viên trong Chi Nhánh
     if (user.role === Role.MANAGER) {
       const users = DataService.getUsers();
+      // Managers should see data from their branch
       const branchUserIds = users
-        .filter(u => u.branch === user.branch && u.role !== Role.ADMIN)
+        .filter(u => u.branch === user.branch)
         .map(u => u.id);
       
-      // Add self
-      if (!branchUserIds.includes(user.id)) branchUserIds.push(user.id);
-
-      return all.filter(c => branchUserIds.includes(c.createdBy));
+      return all.filter(c => branchUserIds.includes(c.createdBy) || c.createdBy === user.id);
     }
 
     // 3. STAFF: Chỉ xem khách hàng do chính mình tạo
@@ -266,12 +286,10 @@ export const DataService = {
     if (user.role === Role.MANAGER) {
        const users = DataService.getUsers();
        const branchUserIds = users
-         .filter(u => u.branch === user.branch && u.role !== Role.ADMIN)
+         .filter(u => u.branch === user.branch)
          .map(u => u.id);
        
-       if (!branchUserIds.includes(user.id)) branchUserIds.push(user.id);
-
-       return all.filter(o => branchUserIds.includes(o.createdBy));
+       return all.filter(o => branchUserIds.includes(o.createdBy) || o.createdBy === user.id);
     }
 
     // 3. STAFF: Chỉ xem đơn hàng do chính mình tạo
