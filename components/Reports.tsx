@@ -441,12 +441,13 @@ export const CustomerList: React.FC<ReportProps> = ({ user, onBack, onAddCustome
           const filterBranch = String(branchFilter).trim().toLowerCase();
           const userIdsInBranch = users
             .filter(u => String(u.branch || '').trim().toLowerCase() === filterBranch)
-            .map(u => u.id);
-          result = result.filter(c => userIdsInBranch.includes(c.createdBy));
+            .map(u => String(u.id).trim().toLowerCase());
+          result = result.filter(c => userIdsInBranch.includes(String(c.createdBy || '').trim().toLowerCase()));
       }
   
       if ((user.role === Role.ADMIN || user.role === Role.MANAGER) && userFilter) {
-          result = result.filter(c => c.createdBy === userFilter);
+          const filterUid = String(userFilter).trim().toLowerCase();
+          result = result.filter(c => String(c.createdBy || '').trim().toLowerCase() === filterUid);
       }
   
       if (filterCity) {
@@ -1034,11 +1035,12 @@ export const SalesLog: React.FC<ReportProps> = ({ user, onBack }) => {
           const filterBranch = String(branchFilter).trim().toLowerCase();
           const userIdsInBranch = users
             .filter(u => String(u.branch || '').trim().toLowerCase() === filterBranch)
-            .map(u => u.id);
-          result = result.filter(o => userIdsInBranch.includes(o.createdBy));
+            .map(u => String(u.id).trim().toLowerCase());
+          result = result.filter(o => userIdsInBranch.includes(String(o.createdBy || '').trim().toLowerCase()));
       }
       if ((user.role === Role.ADMIN || user.role === Role.MANAGER) && userFilter) {
-          result = result.filter(o => o.createdBy === userFilter);
+          const filterUid = String(userFilter).trim().toLowerCase();
+          result = result.filter(o => String(o.createdBy || '').trim().toLowerCase() === filterUid);
       }
       return result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [orders, startDate, endDate, branchFilter, userFilter, user.role, users]);
@@ -1191,8 +1193,8 @@ export const TotalSales: React.FC<ReportProps> = ({ user, onBack }) => {
            const filterBranch = String(branchFilter).trim().toLowerCase();
            const userIdsInBranch = users
              .filter(u => String(u.branch || '').trim().toLowerCase() === filterBranch)
-             .map(u => u.id);
-           filteredOrders = filteredOrders.filter(o => userIdsInBranch.includes(o.createdBy));
+             .map(u => String(u.id).trim().toLowerCase());
+           filteredOrders = filteredOrders.filter(o => userIdsInBranch.includes(String(o.createdBy || '').trim().toLowerCase()));
       }
   
       const userStats: Record<string, { name: string, branch: string, orders: number, revenue: number }> = {};
@@ -1208,21 +1210,23 @@ export const TotalSales: React.FC<ReportProps> = ({ user, onBack }) => {
       }
   
       relevantUsers.forEach(u => {
+          const uid = String(u.id).trim().toLowerCase();
           if (u.role !== Role.ADMIN) { 
-               userStats[u.id] = { name: u.fullName, branch: u.branch, orders: 0, revenue: 0 };
+               userStats[uid] = { name: u.fullName, branch: u.branch, orders: 0, revenue: 0 };
           } else if (user.role === Role.ADMIN) {
-               userStats[u.id] = { name: u.fullName, branch: u.branch, orders: 0, revenue: 0 };
+               userStats[uid] = { name: u.fullName, branch: u.branch, orders: 0, revenue: 0 };
           }
       });
   
       filteredOrders.forEach(o => {
-          if (userStats[o.createdBy]) {
-              userStats[o.createdBy].orders += 1;
-              userStats[o.createdBy].revenue += o.totalRevenue;
+          const oid = String(o.createdBy || '').trim().toLowerCase();
+          if (userStats[oid]) {
+              userStats[oid].orders += 1;
+              userStats[oid].revenue += o.totalRevenue;
           } else {
-               const creator = users.find(u => u.id === o.createdBy);
+               const creator = users.find(u => String(u.id).trim().toLowerCase() === oid);
                if (creator) {
-                    userStats[o.createdBy] = { 
+                    userStats[oid] = { 
                         name: creator.fullName, 
                         branch: creator.branch, 
                         orders: 1, 
