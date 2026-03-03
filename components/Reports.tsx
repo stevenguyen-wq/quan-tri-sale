@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { User, Customer, Order, Role, Branch } from '../types';
 import { DataService } from '../services/dataService';
-import { ArrowLeft, Filter, User as UserIcon, Package, Phone, Building2, MapPin, Briefcase, Printer, X, Edit2, Save, Download, StickyNote, Eye, ChevronRight, Calendar, DollarSign, TrendingUp, Plus, Search, Clock } from 'lucide-react';
+import { ArrowLeft, Filter, User as UserIcon, Package, Phone, Building2, MapPin, Briefcase, Printer, X, Edit2, Save, Download, StickyNote, Eye, ChevronRight, Calendar, DollarSign, TrendingUp, Plus, Search, Clock, Trash2 } from 'lucide-react';
 import { Select, Input } from './Input';
 import { Button } from './Button';
 
@@ -399,7 +399,9 @@ export const CustomerList: React.FC<ReportProps> = ({ user, onBack, onAddCustome
     const [selectedWard, setSelectedWard] = useState<string>('');
     const [street, setStreet] = useState<string>('');
   
-    const availableCustomers = DataService.getCustomersForUser(user);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+    const availableCustomers = useMemo(() => DataService.getCustomersForUser(user), [user, refreshTrigger]);
     const allOrders = DataService.getOrders(); 
     const users = DataService.getUsers();
   
@@ -421,12 +423,25 @@ export const CustomerList: React.FC<ReportProps> = ({ user, onBack, onAddCustome
       };
       fetchCities();
     }, []);
+
+    const handleDeleteCustomer = async () => {
+        if (!selectedCustomer) return;
+        if (window.confirm(`Bạn có chắc chắn muốn xoá khách hàng "${selectedCustomer.name}" không? Hành động này không thể hoàn tác.`)) {
+            await DataService.deleteCustomer(selectedCustomer.id);
+            setSelectedCustomer(null);
+            setIsEditing(false);
+            setRefreshTrigger(prev => prev + 1);
+        }
+    };
   
     const filteredCustomers = useMemo(() => {
       let result = availableCustomers;
   
       if (user.role === Role.ADMIN && branchFilter) {
-          const userIdsInBranch = users.filter(u => u.branch === branchFilter).map(u => u.id);
+          const filterBranch = String(branchFilter).trim().toLowerCase();
+          const userIdsInBranch = users
+            .filter(u => String(u.branch || '').trim().toLowerCase() === filterBranch)
+            .map(u => u.id);
           result = result.filter(c => userIdsInBranch.includes(c.createdBy));
       }
   
@@ -578,10 +593,13 @@ export const CustomerList: React.FC<ReportProps> = ({ user, onBack, onAddCustome
   
     const userOptions = useMemo(() => {
         let filteredUsers = users;
+        const userBranch = String(user.branch || '').trim().toLowerCase();
+        
         if (user.role === Role.MANAGER) {
-            filteredUsers = users.filter(u => u.branch === user.branch);
+            filteredUsers = users.filter(u => String(u.branch || '').trim().toLowerCase() === userBranch);
         } else if (user.role === Role.ADMIN && branchFilter) {
-            filteredUsers = users.filter(u => u.branch === branchFilter);
+            const filterBranch = String(branchFilter).trim().toLowerCase();
+            filteredUsers = users.filter(u => String(u.branch || '').trim().toLowerCase() === filterBranch);
         }
         return filteredUsers.map(u => ({ value: u.id, label: u.fullName }));
     }, [users, user.role, user.branch, branchFilter]);
@@ -604,9 +622,16 @@ export const CustomerList: React.FC<ReportProps> = ({ user, onBack, onAddCustome
               )}
   
                <div className="flex flex-wrap items-center justify-between mb-6 gap-3">
-                  <Button variant="outline" size="sm" onClick={() => { setSelectedCustomer(null); setIsEditing(false); }}>
-                      <ArrowLeft size={18} /> Quay lại
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setSelectedCustomer(null); setIsEditing(false); }}>
+                        <ArrowLeft size={18} /> Quay lại
+                    </Button>
+                    {user.role === Role.ADMIN && !isEditing && (
+                         <Button variant="outline" size="sm" onClick={handleDeleteCustomer} className="text-red-600 border-red-200 hover:bg-red-50">
+                            <Trash2 size={18} /> Xoá
+                        </Button>
+                    )}
+                  </div>
                   
                   {!isEditing ? (
                       <Button variant="secondary" size="sm" onClick={handleStartEdit}>
@@ -990,10 +1015,13 @@ export const SalesLog: React.FC<ReportProps> = ({ user, onBack }) => {
   
     const userOptions = useMemo(() => {
       let filteredUsers = users;
+      const userBranch = String(user.branch || '').trim().toLowerCase();
+      
       if (user.role === Role.MANAGER) {
-        filteredUsers = users.filter(u => u.branch === user.branch);
+        filteredUsers = users.filter(u => String(u.branch || '').trim().toLowerCase() === userBranch);
       } else if (user.role === Role.ADMIN && branchFilter) {
-        filteredUsers = users.filter(u => u.branch === branchFilter);
+        const filterBranch = String(branchFilter).trim().toLowerCase();
+        filteredUsers = users.filter(u => String(u.branch || '').trim().toLowerCase() === filterBranch);
       }
       return filteredUsers.map(u => ({ value: u.id, label: u.fullName }));
     }, [users, user.role, user.branch, branchFilter]);
@@ -1003,7 +1031,10 @@ export const SalesLog: React.FC<ReportProps> = ({ user, onBack }) => {
       if (startDate) result = result.filter(o => o.date >= startDate);
       if (endDate) result = result.filter(o => o.date <= endDate);
       if (user.role === Role.ADMIN && branchFilter) {
-          const userIdsInBranch = users.filter(u => u.branch === branchFilter).map(u => u.id);
+          const filterBranch = String(branchFilter).trim().toLowerCase();
+          const userIdsInBranch = users
+            .filter(u => String(u.branch || '').trim().toLowerCase() === filterBranch)
+            .map(u => u.id);
           result = result.filter(o => userIdsInBranch.includes(o.createdBy));
       }
       if ((user.role === Role.ADMIN || user.role === Role.MANAGER) && userFilter) {
@@ -1157,18 +1188,23 @@ export const TotalSales: React.FC<ReportProps> = ({ user, onBack }) => {
       });
   
       if (user.role === Role.ADMIN && branchFilter) {
-           const userIdsInBranch = users.filter(u => u.branch === branchFilter).map(u => u.id);
+           const filterBranch = String(branchFilter).trim().toLowerCase();
+           const userIdsInBranch = users
+             .filter(u => String(u.branch || '').trim().toLowerCase() === filterBranch)
+             .map(u => u.id);
            filteredOrders = filteredOrders.filter(o => userIdsInBranch.includes(o.createdBy));
       }
   
       const userStats: Record<string, { name: string, branch: string, orders: number, revenue: number }> = {};
       let relevantUsers = users;
       if (user.role === Role.MANAGER) {
-          relevantUsers = users.filter(u => u.branch === user.branch);
+          const userBranch = String(user.branch || '').trim().toLowerCase();
+          relevantUsers = users.filter(u => String(u.branch || '').trim().toLowerCase() === userBranch);
       } else if (user.role === Role.STAFF) {
           relevantUsers = [user];
       } else if (user.role === Role.ADMIN && branchFilter) {
-          relevantUsers = users.filter(u => u.branch === branchFilter);
+          const filterBranch = String(branchFilter).trim().toLowerCase();
+          relevantUsers = users.filter(u => String(u.branch || '').trim().toLowerCase() === filterBranch);
       }
   
       relevantUsers.forEach(u => {
