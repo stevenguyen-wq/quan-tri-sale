@@ -73,12 +73,17 @@ export const DataService = {
               if (data.users && Array.isArray(data.users)) {
                   const normalizedUsers = data.users.map((u: any) => {
                       let branch = u.branch || '';
-                      if (branch.toLowerCase().includes('hội sở')) branch = Branch.HOI_SO;
-                      else if (branch.toLowerCase().includes('miền bắc')) branch = Branch.MIEN_BAC;
+                      const lowerBranch = branch.toLowerCase();
+                      if (lowerBranch.includes('hội sở')) branch = Branch.HOI_SO;
+                      else if (lowerBranch.includes('miền bắc')) branch = Branch.MIEN_BAC;
+                      
+                      // Robust ID mapping
+                      const id = String(u.id || u.ID || u.MaNV || u.MaNhanVien || u.username || '');
                       
                       return {
                           ...u,
-                          id: String(u.id || u.ID || ''),
+                          id: id,
+                          username: u.username || id, // Fallback username to ID
                           role: u.role ? u.role.toLowerCase() : Role.STAFF,
                           branch: branch
                       };
@@ -88,33 +93,42 @@ export const DataService = {
 
               // 2. Sync Customers
               if (data.customers && Array.isArray(data.customers)) {
-                  const cleanCustomers = data.customers.map((c: any) => ({
-                      ...c,
-                      id: String(c.id || c.ID || ''),
-                      createdBy: String(c.createdBy || c.salesId || c.SalesID || ''),
-                      createdByName: c.createdByName || c.salesName || ''
-                  }));
+                  const cleanCustomers = data.customers.map((c: any) => {
+                      const id = String(c.id || c.ID || '');
+                      const createdBy = String(c.createdBy || c.salesId || c.SalesID || c.MaNV || c.MaNhanVien || c.username || '');
+                      return {
+                          ...c,
+                          id: id,
+                          createdBy: createdBy,
+                          createdByName: c.createdByName || c.salesName || c.SalesName || ''
+                      };
+                  });
                   localStorage.setItem(STORAGE_KEYS.CUSTOMERS, JSON.stringify(cleanCustomers));
               }
 
               // 3. Sync Orders
               if (data.orders && Array.isArray(data.orders)) {
-                  const cleanOrders = data.orders.map((o: any) => ({
-                      ...o,
-                      id: String(o.id || o.ID || ''),
-                      customerId: String(o.customerId || o.CustomerID || ''),
-                      // Mapping fields from Google Sheet naming conventions
-                      createdBy: String(o.createdBy || o.salesId || o.SalesID || ''),
-                      createdByName: o.createdByName || o.salesName || '',
-                      totalRevenue: Number(o.totalRevenue || o.revenue || 0),
-                      totalPayment: Number(o.totalPayment || o.finalAmount || 0),
-                      deposit: Number(o.deposit || o.depositAmount || 0),
-                      revenueIceCream: Number(o.revenueIceCream || o.totalIceCreamRevenue || 0),
-                      revenueTopping: Number(o.revenueTopping || o.totalToppingRevenue || 0),
-                      items: Array.isArray(o.items) ? o.items : [],
-                      toppings: Array.isArray(o.toppings) ? o.toppings : [],
-                      hasInvoice: o.hasInvoice === true || o.hasInvoice === "TRUE"
-                  }));
+                  const cleanOrders = data.orders.map((o: any) => {
+                      const id = String(o.id || o.ID || '');
+                      const customerId = String(o.customerId || o.CustomerID || '');
+                      const createdBy = String(o.createdBy || o.salesId || o.SalesID || o.MaNV || o.MaNhanVien || o.username || '');
+                      
+                      return {
+                          ...o,
+                          id: id,
+                          customerId: customerId,
+                          createdBy: createdBy,
+                          createdByName: o.createdByName || o.salesName || o.SalesName || '',
+                          totalRevenue: Number(o.totalRevenue || o.revenue || o.Revenue || 0),
+                          totalPayment: Number(o.totalPayment || o.finalAmount || o.FinalAmount || 0),
+                          deposit: Number(o.deposit || o.depositAmount || o.DepositAmount || 0),
+                          revenueIceCream: Number(o.revenueIceCream || o.totalIceCreamRevenue || 0),
+                          revenueTopping: Number(o.revenueTopping || o.totalToppingRevenue || 0),
+                          items: Array.isArray(o.items) ? o.items : [],
+                          toppings: Array.isArray(o.toppings) ? o.toppings : [],
+                          hasInvoice: o.hasInvoice === true || o.hasInvoice === "TRUE"
+                      };
+                  });
                   localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(cleanOrders));
               }
               localStorage.setItem(STORAGE_KEYS.LAST_SYNC, new Date().toISOString());
@@ -262,9 +276,10 @@ export const DataService = {
     // 2. MANAGER: Xem khách hàng của toàn bộ nhân viên trong Chi Nhánh
     if (user.role === Role.MANAGER) {
       const users = DataService.getUsers();
-      // Managers should see data from their branch
+      const userBranch = String(user.branch || '').trim().toLowerCase();
+      
       const branchUserIds = users
-        .filter(u => u.branch === user.branch)
+        .filter(u => String(u.branch || '').trim().toLowerCase() === userBranch)
         .map(u => u.id);
       
       return all.filter(c => branchUserIds.includes(c.createdBy) || c.createdBy === user.id);
@@ -285,8 +300,10 @@ export const DataService = {
     // 2. MANAGER: Xem đơn hàng của toàn bộ nhân viên trong Chi Nhánh
     if (user.role === Role.MANAGER) {
        const users = DataService.getUsers();
+       const userBranch = String(user.branch || '').trim().toLowerCase();
+       
        const branchUserIds = users
-         .filter(u => u.branch === user.branch)
+         .filter(u => String(u.branch || '').trim().toLowerCase() === userBranch)
          .map(u => u.id);
        
        return all.filter(o => branchUserIds.includes(o.createdBy) || o.createdBy === user.id);
