@@ -96,14 +96,15 @@ export const Overview: React.FC<Props> = ({ user }) => {
     if (user.role === Role.ADMIN || user.role === Role.MANAGER) {
         const empMap: Record<string, any> = {};
         filteredOrders.forEach(o => {
-            if (!empMap[o.createdBy]) empMap[o.createdBy] = { totalRevenue: 0, totalOrders: 0 };
-            empMap[o.createdBy].totalRevenue += o.totalRevenue;
-            empMap[o.createdBy].totalOrders += 1;
+            const creatorId = String(o.createdBy || '').trim().toLowerCase();
+            if (!empMap[creatorId]) empMap[creatorId] = { totalRevenue: 0, totalOrders: 0 };
+            empMap[creatorId].totalRevenue += o.totalRevenue;
+            empMap[creatorId].totalOrders += 1;
         });
 
         topEmployees = Object.entries(empMap)
             .map(([id, s]) => {
-                const u = allUsers.find(foundUser => foundUser.id === id);
+                const u = allUsers.find(foundUser => String(foundUser.id).trim().toLowerCase() === id);
                 return { name: u?.fullName || 'Unknown', branch: u?.branch || '', role: u?.role, ...s };
             })
             .filter(e => user.role === Role.ADMIN ? true : e.role !== Role.ADMIN)
@@ -112,9 +113,10 @@ export const Overview: React.FC<Props> = ({ user }) => {
 
         const custMap: Record<string, any> = {};
         filteredOrders.forEach(o => {
-            if (!custMap[o.customerId]) custMap[o.customerId] = { name: o.customerName, pic: o.createdByName, totalRevenue: 0, totalOrders: 0 };
-            custMap[o.customerId].totalRevenue += o.totalRevenue;
-            custMap[o.customerId].totalOrders += 1;
+            const custId = String(o.customerId || '').trim().toLowerCase();
+            if (!custMap[custId]) custMap[custId] = { name: o.customerName, pic: o.createdByName, totalRevenue: 0, totalOrders: 0 };
+            custMap[custId].totalRevenue += o.totalRevenue;
+            custMap[custId].totalOrders += 1;
         });
 
         topCustomers = Object.values(custMap).sort((a, b) => b.totalRevenue - a.totalRevenue);
