@@ -78,13 +78,19 @@ export const DataService = {
                       else if (lowerBranch.includes('miền bắc')) branch = Branch.MIEN_BAC;
                       
                       // Robust ID mapping
-                      const id = String(u.id || u.ID || u.MaNV || u.MaNhanVien || u.username || '');
+                      const id = String(u.id || u.ID || u.MaNV || u.MaNhanVien || u.username || '').trim().toLowerCase();
                       
+                      let role = u.role ? String(u.role).toLowerCase().trim() : Role.STAFF;
+                      // Handle Vietnamese role names
+                      if (role.includes('nhân viên')) role = Role.STAFF;
+                      else if (role.includes('quản lý')) role = Role.MANAGER;
+                      else if (role.includes('quản trị') || role.includes('admin')) role = Role.ADMIN;
+
                       return {
                           ...u,
                           id: id,
                           username: u.username || id, // Fallback username to ID
-                          role: u.role ? u.role.toLowerCase() : Role.STAFF,
+                          role: role,
                           branch: branch
                       };
                   });
@@ -94,8 +100,8 @@ export const DataService = {
               // 2. Sync Customers
               if (data.customers && Array.isArray(data.customers)) {
                   const cleanCustomers = data.customers.map((c: any) => {
-                      const id = String(c.id || c.ID || '');
-                      const createdBy = String(c.createdBy || c.salesId || c.SalesID || c.MaNV || c.MaNhanVien || c.username || '');
+                      const id = String(c.id || c.ID || '').trim().toLowerCase();
+                      const createdBy = String(c.createdBy || c.salesId || c.SalesID || c.MaNV || c.MaNhanVien || c.username || '').trim().toLowerCase();
                       return {
                           ...c,
                           id: id,
@@ -109,9 +115,9 @@ export const DataService = {
               // 3. Sync Orders
               if (data.orders && Array.isArray(data.orders)) {
                   const cleanOrders = data.orders.map((o: any) => {
-                      const id = String(o.id || o.ID || '');
-                      const customerId = String(o.customerId || o.CustomerID || '');
-                      const createdBy = String(o.createdBy || o.salesId || o.SalesID || o.MaNV || o.MaNhanVien || o.username || '');
+                      const id = String(o.id || o.ID || '').trim().toLowerCase();
+                      const customerId = String(o.customerId || o.CustomerID || '').trim().toLowerCase();
+                      const createdBy = String(o.createdBy || o.salesId || o.SalesID || o.MaNV || o.MaNhanVien || o.username || '').trim().toLowerCase();
                       
                       return {
                           ...o,
@@ -280,13 +286,18 @@ export const DataService = {
       
       const branchUserIds = users
         .filter(u => String(u.branch || '').trim().toLowerCase() === userBranch)
-        .map(u => u.id);
+        .map(u => String(u.id).trim().toLowerCase());
       
-      return all.filter(c => branchUserIds.includes(c.createdBy) || c.createdBy === user.id);
+      const uid = String(user.id).trim().toLowerCase();
+      return all.filter(c => {
+          const creatorId = String(c.createdBy || '').trim().toLowerCase();
+          return branchUserIds.includes(creatorId) || creatorId === uid;
+      });
     }
 
     // 3. STAFF: Chỉ xem khách hàng do chính mình tạo
-    return all.filter(c => c.createdBy === user.id);
+    const uid = String(user.id).trim().toLowerCase();
+    return all.filter(c => String(c.createdBy || '').trim().toLowerCase() === uid);
   },
 
   getOrdersForUser: (user: User): Order[] => {
@@ -304,12 +315,17 @@ export const DataService = {
        
        const branchUserIds = users
          .filter(u => String(u.branch || '').trim().toLowerCase() === userBranch)
-         .map(u => u.id);
+         .map(u => String(u.id).trim().toLowerCase());
        
-       return all.filter(o => branchUserIds.includes(o.createdBy) || o.createdBy === user.id);
+       const uid = String(user.id).trim().toLowerCase();
+       return all.filter(o => {
+           const creatorId = String(o.createdBy || '').trim().toLowerCase();
+           return branchUserIds.includes(creatorId) || creatorId === uid;
+       });
     }
 
     // 3. STAFF: Chỉ xem đơn hàng do chính mình tạo
-    return all.filter(o => o.createdBy === user.id);
+    const uid = String(user.id).trim().toLowerCase();
+    return all.filter(o => String(o.createdBy || '').trim().toLowerCase() === uid);
   }
 };
